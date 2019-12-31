@@ -1,8 +1,5 @@
 language: node_js
 script: echo
-stages:
-  - name: deploy
-    if: branch = main
 deploy:
   provider: s3
   access_key_id: AKIAJTGH5YC4SG5T6KTA
@@ -11,3 +8,5 @@ deploy:
   bucket: survey.moveon.org
   acl: public_read
   region: us-west-1
+  on:
+    branch: main
