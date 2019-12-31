@@ -82,6 +82,18 @@
       </div>
     </div>
     <script type="text/javascript">
+      function alphanumeric_only($input) {
+        $input.keypress(function (e) {
+          var regex = new RegExp("^[a-z0-9]+$")
+          var str = String.fromCharCode(!e.charCode ? e.which : e.charCode)
+          if (regex.test(str)) {
+            return true
+          }
+          e.preventDefault()
+          return false
+        })
+      }
+
       function cardinal_number(number) {
         var last_digit = number.toString().slice(-1)
         if (last_digit == '1') {
@@ -194,6 +206,8 @@
         ]
         return html.join("\n")
       }
+
+      alphanumeric_only($('#field_name'))
 
       $('#generate-button').click(function() {
         var field_name = $('#field_name').val()
