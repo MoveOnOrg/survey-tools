@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="giraffe" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Ranked Choice Field Creator | MoveOn</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge;chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <link href="https://static.moveon.org/giraffe/styles/main.css?v=20190322" rel="stylesheet">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <style type="text/css" media="screen">
+      form label {
+        font-size: 16px !important;
+        font-weight: bold !important;
+      }
+    </style>
+  </head>
+  <body role="document">
+    <header id="main-header" class="giraffe header">
+      <div class="mo-container">
+        <div class="logo">
+          <img src="https://static.moveon.org/giraffe/images/logo.svg" alt="MoveOn Logo">
+        </div>
+      </div>
+    </header>
+    <div class="container" role="main">
+      <div class="row">
+        <div class="col-md-12 mb-5">
+          <div id="content-heading" class="mt-5 mb-3 row">
+            <div class="col-md-12">
+              <h1 class="text-align-center">Ranked Choice Field Creator</h1>
+              <div id="introduction-text" class="mt-3">
+                <p>This tool generates HTML you can drop into an ActionKit Custom HTML survey field to create a ranked-choice input. The results will be saved in action fields named <code>ranked_choice_1</code>, <code>ranked_choice_2</code>, etc. with values based on the options provided.</p>
+              </div>
+            </div>
+          </div>
+          <form method="POST" action="#" accept-charset="utf-8" data-viewable="true">
+            <div class="row justify-content-center ">
+              <div class="col-md-10 relative-font-color-for-bg">
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="mt-4 mr-0 override-collapse fieldtype-text label-before-input input-block">
+                      <label for="field_name">Field Name (lowercase & numbers)</label>
+                      <input id="field_name" type="text" />
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="input-block textarea-input mt-4 label-before-input">
+                      <label for="choices">Choices to Rank (1 per line)</label>
+                      <textarea name="choices" id="choices" type="text" rows="8"></textarea>
+                    </div>
+                  </div>
+                  <div class="col-md-12">
+                    <div class="mt-4 mr-0 override-collapse fieldtype-text label-before-input input-block">
+                      <label for="limit">Limit Number of Choices</label>
+                      <input id="limit" type="number" size="2" />
+                    </div>
+                  </div>
+                </div>
+                <div class="form-section--submit buttons text-align-center mt-5">
+                  <button id="generate-button" type="submit" class="btn pl-5 pr-5 pt-2 pb-2">Generate HTML & Preview</button>
+                </div>
+                <div class="row">
+                  <div class="col-md-12">
+                    <div class="input-block textarea-input mt-4 label-before-input">
+                      <label for="html">Generated HTML</label>
+                      <p>Copy and paste this into a custom HTML field.</p>
+                      <textarea id="html" type="text" rows="4s"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </form>
+          <form>
+            <h1 class="text-align-center">Preview</h1>
+            <div class="row justify-content-center ">
+              <div class="col-md-10 relative-font-color-for-bg" id="preview">
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <script type="text/javascript">
+      function cardinal_number(number) {
+        var last_digit = number.toString().slice(-1)
+        if (last_digit == '1') {
+          return number + 'st'
+        }
+        if (last_digit == '2') {
+          return number + 'nd'
+        }
+        if (last_digit == '3') {
+          return number + 'rd'
+        }
+        return number + 'th'
+      }
+
+      function choice_html(c, index, choices) {
+        var field_name = $('#field_name').val()
+        var count = index + 1
+        var html = '<div class="col-md-12">'
+        html += '<div class="mt-4 mr-0 survey_field override-collapse fieldtype-select label-before-input input-block">'
+        html += '<label for="' + field_name + '_ranked_choice_' + count + '">'
+        html += cardinal_number(count) + ' Choice</label>'
+        html += '<select name="action_' + field_name + '_ranked_choice_' + count + '" id="' + field_name + '_ranked_choice_' + count + '">'
+        html += '<option value="">----</option>'
+        html += choices.map(function(choice) { return '<option value="' + choice + '">' + choice + '</option>'}).join('')
+        html += '</select></div></div>'
+        return html
+      }
+
+      function script_tag(field_name) {
+        html = [
+          '<script type="text/javascript">',
+          'function rankedChoiceDisablePreviousOptions($select) {',
+          '  var selectedValues = []',
+          '  $select.find("option").removeAttr("disabled")',
+          '  $select',
+          '    .parents(".col-md-12").prevAll()',
+          '    .find("select").each(function() {',
+          '      var otherSelected = $(this).val()',
+          '      if (otherSelected != "") {',
+          '        selectedValues.push(otherSelected)',
+          '      }',
+          '    })',
+          '  var selectedValuesSelector = selectedValues.map(',
+          '    function(selectedValue) {',
+          '      return "option[value=\'" + selectedValue + "\']"',
+          '    }',
+          '  )',
+          '  $select',
+          '    .find(selectedValuesSelector.join(", "))',
+          '    .attr("disabled", "disabled")',
+          '}',
+          // Disable all but first select
+          '$("#ranked-choice-' + field_name + ' select:not(:first)")',
+          '  .attr("disabled", "disabled")',
+          '$("#ranked-choice-' + field_name + ' select").change(',
+          '  function() {',
+          '    var $changedSelect = $(this)',
+          '    var $duplicateSelect = false',
+          '    var $nextSelect = false',
+          '    if ($changedSelect.val() == "") {',
+          // If choice is empty, disable and unset all following selects
+          '      $changedSelect',
+          '        .parents(".col-md-12").nextAll().find("select")',
+          '        .attr("disabled", "disabled")',
+          '        .val("")',
+          '    }',
+          '    else {',
+          // Otherswise, unset any select that previously had this value
+          '      $changedSelect',
+          '        .parents(".col-md-12").nextAll().find("select").each(',
+          '          function() {',
+          '            if ($(this).val() == $changedSelect.val()) {',
+          '              $duplicateSelect = $(this)',
+          '              $duplicateSelect.val("")',
+          '            }',
+          '          }',
+          '        )',
+          // Move up and fill in any unset values in the middle
+          '      if ($duplicateSelect) {',
+          '        $nextSelect = $duplicateSelect',
+          '          .parents(".col-md-12").next().find("select")',
+          '        while ($nextSelect.length && $nextSelect.val() != "") {',
+          '          $duplicateSelect.val($nextSelect.val())',
+          '          $nextSelect.val("").attr("disabled", "disabled")',
+          '          $duplicateSelect = $nextSelect',
+          '          $duplicateSelect.removeAttr("disabled")',
+          '          $nextSelect = $duplicateSelect',
+          '            .parents(".col-md-12").next().find("select")',
+          '        }',
+          // Disable all after first unset
+          '        $duplicateSelect.parents(".col-md-12").nextAll().find("select")',
+          '          .attr("disabled", "disabled")',
+          '          .val("")',
+          '      }',
+          '      else {',
+          '        $changedSelect',
+          '          .parents(".col-md-12").next().find("select")',
+          '          .removeAttr("disabled")',
+          '      }',
+          // And disable all selected options in all following selects
+          '      $changedSelect',
+          '        .parents(".col-md-12").nextAll()',
+          '        .find("select").each(function() {',
+          '          rankedChoiceDisablePreviousOptions($(this))',
+          '        })',
+          '    }',
+          '  }',
+          ')',
+          '</' + 'script>'
+        ]
+        return html.join("\n")
+      }
+
+      $('#generate-button').click(function() {
+        var field_name = $('#field_name').val()
+        var choices = $('#choices').val().trim().split("\n")
+        var choices_html = choices.map(choice_html)
+        var limit = parseInt($('#limit').val(), 10)
+        if (limit > 0) {
+          choices_html = choices_html.slice(0, limit)
+        }
+        var preview_html = '<div id="ranked-choice-'
+        preview_html += field_name + '">'
+        preview_html += choices_html.join("\n") + '</div>'
+        preview_html += script_tag(field_name)
+        $('#html').val(preview_html)
+        $('#preview').html(preview_html)
+        return false
+      })
+
+    </script>
+  </body>
+</html>
